@@ -75,11 +75,25 @@ func (r *Router) Run() error {
 		}
 
 		// Privileged routes
-		privilegedRoutes := api.Group("/v1")
-		privilegedRoutes.Use(authmiddleware.Authorize(r.jwtService, true))
+		privilegedRoutesAdmin := api.Group("/v1")
+		privilegedRoutesAdmin.Use(authmiddleware.AuthorizeAdmin(r.jwtService, true))
 		for _, c := range r.controllers {
-			c.RegisterPrivileged(privilegedRoutes)
+			c.RegisterPrivileged(privilegedRoutesAdmin)
 		}
+
+		privilegedRoutesHR := api.Group("/v1")
+		privilegedRoutesHR.Use(authmiddleware.AuthorizeHR(r.jwtService))
+		for _, c := range r.controllers {
+			c.RegisterPrivileged(privilegedRoutesAdmin)
+		}
+
+		privilegedRoutesManager := api.Group("/v1")
+		privilegedRoutesManager.Use(authmiddleware.AuthorizeManager(r.jwtService))
+		for _, c := range r.controllers {
+			c.RegisterPrivileged(privilegedRoutesAdmin)
+		}
+
+		
 	}
 
 	log.Println("Listening on", r.addr)
