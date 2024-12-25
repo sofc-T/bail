@@ -78,19 +78,19 @@ func (r *Router) Run() error {
 		privilegedRoutesAdmin := api.Group("/v1")
 		privilegedRoutesAdmin.Use(authmiddleware.AuthorizeAdmin(r.jwtService, true))
 		for _, c := range r.controllers {
-			c.RegisterPrivileged(privilegedRoutesAdmin)
+			c.RegisterPrivilegedAdmin(privilegedRoutesAdmin)
 		}
 
 		privilegedRoutesHR := api.Group("/v1")
 		privilegedRoutesHR.Use(authmiddleware.AuthorizeHR(r.jwtService))
 		for _, c := range r.controllers {
-			c.RegisterPrivileged(privilegedRoutesAdmin)
+			c.RegisterPrivilegedHR(privilegedRoutesAdmin)
 		}
 
 		privilegedRoutesManager := api.Group("/v1")
 		privilegedRoutesManager.Use(authmiddleware.AuthorizeManager(r.jwtService))
 		for _, c := range r.controllers {
-			c.RegisterPrivileged(privilegedRoutesAdmin)
+			c.RegisterPrivilegedManager(privilegedRoutesAdmin)
 		}
 
 		

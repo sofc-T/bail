@@ -31,6 +31,7 @@ type UserController struct {
 	getEmployeeHandler       icmd.IHandler[int, []*models.User]
 	getUserHandler			 icmd.IHandler[uuid.UUID, *models.User]
 	deleteEmployeeHandler    icmd.IHandler[uuid.UUID, error]
+	promoteUserHandler       icmd.IHandler[*usercmd.PromoteUserCommand, *models.User]
 
 }
 
@@ -42,6 +43,7 @@ type Config struct {
 	GetUserHandler			 icmd.IHandler[uuid.UUID, *models.User]
 	DeleteEmployeeHandler    icmd.IHandler[uuid.UUID, error]
 	LoginUserHandler         icmd.IHandler[*usercmd.LoginCommand, *result.LoginInResult]
+	PromoteUserHandler       icmd.IHandler[*usercmd.PromoteUserCommand, *models.User]
 	
 }
 
@@ -57,12 +59,23 @@ func New(config Config) *UserController {
 	}
 }
 
-func (u UserController) RegisterPrivileged(router *gin.RouterGroup) {
-		
+func (u UserController) RegisterPrivilegedAdmin(router *gin.RouterGroup) {
+	router = router.Group("/auth")
+	router.POST("/promote", u.promote)
 }
 
 func (u UserController) RegisterProtected(router *gin.RouterGroup) {
 
+}
+
+func (u UserController) RegisterPrivilegedHR(router *gin.RouterGroup) {
+	
+	
+}
+
+func (u UserController) RegisterPrivilegedManager(router *gin.RouterGroup) {
+	
+	
 }
 
 func (u UserController) RegisterPublic(router *gin.RouterGroup) {
@@ -230,5 +243,30 @@ func (u UserController) login(ctx *gin.Context) {
 
 	log.Println("User logged in successfully -- UserController")
 	ctx.JSON(http.StatusCreated, res)
+
+}
+
+func (u UserController) promote(ctx *gin.Context) {
+	var promote promoteDto
+	if err := ctx.BindJSON(&promote); err != nil {
+		ctx.JSON(http.StatusBadRequest, "Invalid Input")
+		log.Println("User input could not be bound -- UserController")
+		return
+	}
+
+
+
+	command := usercmd.NewPromoteUserCommand(promote.ID, promote.Role)
+
+	res, err := u.promoteUserHandler.Handle(command)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, err.Error())
+		log.Println("User use case invalidated data -- UserController")
+		return
+	}
+
+	result := toUserDto(res)
+	log.Println("User promoted successfully -- UserController")
+	ctx.JSON(http.StatusCreated, result)
 
 }

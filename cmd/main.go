@@ -73,12 +73,12 @@ func initRepos(cfg *config.Config, mongoClient *mongo.Client) *userrepo.Repo {
 
 func initUserController(userRepo *userrepo.Repo, hashService *hash.Service, jwtService *jwt.Service) *usercontroller.UserController {
 
-	// loginHandler := usercmd.NewLoginHandler(usercmd.LoginConfig{
-	// 	UserRepo:     userRepo,
-	// 	JwtService:   jwtService,
-	// 	HashService:  hashService,
-	// },
-	// )
+	loginHandler := usercmd.NewLoginHandler(usercmd.LoginConfig{
+		UserRepo:     userRepo,
+		JwtService:   jwtService,
+		HashService:  hashService,
+	},
+	)
 
 	signupHandler := usercmd.NewSignUpHandler(usercmd.SignUpConfig{
 		UserRepo:    userRepo,
@@ -95,10 +95,11 @@ func initUserController(userRepo *userrepo.Repo, hashService *hash.Service, jwtS
 	return usercontroller.New(usercontroller.Config{
 		SignupUserHandler: signupHandler,
 		UpdateUserHandler: updateHandler,
-		// LoginUserHandler:     loginHandler,
+		LoginUserHandler:     loginHandler,
 		GetEmployeeHandler:    userqry.NewGetusersHandler(userRepo),
 		GetUserHandler:        userqry.NewGetHandler(userRepo),
 		DeleteEmployeeHandler: usercmd.NewDeleteHandler(userRepo),
+		PromoteUserHandler:    usercmd.NewPromoteHandler(userRepo),
 	},
 	)
 

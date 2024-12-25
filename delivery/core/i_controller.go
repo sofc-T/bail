@@ -14,5 +14,11 @@ type IController interface {
 	RegisterProtected(route *gin.RouterGroup)
 
 	// RegisterPrivileged sets up routes with additional role-based Authorizeation.
-	RegisterPrivileged(route *gin.RouterGroup)
+	RegisterPrivilegedAdmin(route *gin.RouterGroup)
+
+	// RegisterPrivilegedHR sets up routes with additional role-based Authorizeation.
+	RegisterPrivilegedHR(route *gin.RouterGroup)
+
+	//RegisterPrivilegedManager sets up routes with additional role-based Authorizeation.
+	RegisterPrivilegedManager(route *gin.RouterGroup)
 }
