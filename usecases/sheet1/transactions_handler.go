@@ -1,6 +1,7 @@
 package transaction_cmd
 
 import (
+	"bail/domain/models"
 	"bytes"
 	"fmt"
 	"strconv"
@@ -60,8 +61,8 @@ func processTransactionsFromBytes(fileData []byte, sheet int) error {
 	return nil
 }
 
-func parseTransaction(row []string) (Transaction, error) {
-	var transaction Transaction
+func parseTransaction(row []string) (models.Transaction, error) {
+	var transaction models.Transaction
 	var err error
 
 	// Parse PaidIn
