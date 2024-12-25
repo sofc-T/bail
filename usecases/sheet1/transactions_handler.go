@@ -3,6 +3,7 @@ package transaction_cmd
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/xuri/excelize/v2"
@@ -59,6 +60,30 @@ func processTransactionsFromBytes(fileData []byte, sheet int) error {
 	return nil
 }
 
-func parseTransaction(limitedRow []string) (any, any) {
-	panic("unimplemented")
+func parseTransaction(row []string) (Transaction, error) {
+	var transaction Transaction
+	var err error
+
+	// Parse PaidIn
+	transaction.PaidIn, err = strconv.ParseFloat(strings.ReplaceAll(row[0], ",", ""), 64)
+	if err != nil && row[0] != "" {
+		return transaction, fmt.Errorf("failed to parse PaidIn: %v", err)
+	}
+
+	// Parse Balance
+	transaction.Balance, err = strconv.ParseFloat(strings.ReplaceAll(row[1], ",", ""), 64)
+	if err != nil {
+		return transaction, fmt.Errorf("failed to parse Balance: %v", err)
+	}
+
+	// Parse Withdrawal
+	transaction.Withdrawal, err = strconv.ParseFloat(strings.ReplaceAll(row[2], ",", ""), 64)
+	if err != nil && row[2] != "" {
+		return transaction, fmt.Errorf("failed to parse Withdrawal: %v", err)
+	}
+
+	// Set Agent
+	transaction.Agent = row[3]
+
+	return transaction, nil
 }
