@@ -39,7 +39,7 @@ type LoginInResult struct {
 	Token string
 }
 
-func NewLoginInResult(token string, refreshToken string, user *models.User) LoginInResult {
+func NewLoginInResult(token string,  user *models.User) LoginInResult {
 	return LoginInResult{
 		Token: token,
 		User:  user,
