@@ -1,8 +1,8 @@
 package usercontroller
 
 import (
+	
 	"bail/domain/models"
-
 	"github.com/google/uuid"
 )
 
