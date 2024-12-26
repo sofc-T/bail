@@ -3,7 +3,6 @@ package rootrepo
 import (
 	"bail/domain/models"
 
-	"github.com/google/uuid"
 )
 
 type adminDTO struct {
@@ -18,8 +17,5 @@ func fromAdmin(root models.Root) adminDTO {
 		Balance:        root.GetBalance(),
 		NewTransactions: root.GetNewTransactions(),
 	}
-}
-func toAdmin(dto adminDTO) models.Root{
-	return dto.Id, dto.Balance, dto.NewTransactions
 }
 
