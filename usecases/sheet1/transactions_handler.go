@@ -74,6 +74,7 @@ func (s *Sheet1Handler) Handle(cmd *Sheet1Command) (*models.Root, error) {
 
 		if transaction.PaidIn() > 0 {
 			fmt.Printf("Notify agent %s: Deduct %.2f from PaidIn. Update admin to new balance %.2f\n", agentCode, transaction.PaidIn(), transaction.Balance())
+			
 		} else {
 			fmt.Printf("Notify agent %s: Deduct %.2f from Withdrawal. Update admin to new balance %.2f\n", agentCode, transaction.Withdrawal(), transaction.Balance())
 		}
