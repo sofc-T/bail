@@ -15,7 +15,6 @@ import (
 	basecontroller "bail/delivery/base"
 	"bail/domain/models"
 	icmd "bail/usecases/core/cqrs/command"
-
 	// passwordreset "bail/usecases/password_reset"
 	// resultValidate "bail/usecases/password_reset/result"
 	usercmd "bail/usecases/user/command"
