@@ -48,13 +48,13 @@ func processTransactionsFromBytes(fileData []byte, sheet int) error {
 		}
 
 		// Extract agent code (first part of the Agent string)
-		agentCode := strings.Split(transaction.Agent, " ")[0]
+		agentCode := strings.Split(transaction.Agent(), " ")[0]
 
 		// Handle PaidIn or Withdrawal
-		if transaction.PaidIn > 0 {
-			fmt.Printf("Notify agent %s: Deduct %.2f from PaidIn. Update admin to new balance %.2f\n", agentCode, transaction.PaidIn, transaction.Balance)
+		if transaction.PaidIn() > 0 {
+			fmt.Printf("Notify agent %s: Deduct %.2f from PaidIn. Update admin to new balance %.2f\n", agentCode, transaction.PaidIn(), transaction.Balance())
 		} else {
-			fmt.Printf("Notify agent %s: Deduct %.2f from Withdrawal. Update admin to new balance %.2f\n", agentCode, transaction.Withdrawal, transaction.Balance)
+			fmt.Printf("Notify agent %s: Deduct %.2f from Withdrawal. Update admin to new balance %.2f\n", agentCode, transaction.Withdrawal(), transaction.Balance())
 		}
 	}
 
@@ -66,25 +66,30 @@ func parseTransaction(row []string) (models.Transaction, error) {
 	var err error
 
 	// Parse PaidIn
-	transaction.PaidIn, err = strconv.ParseFloat(strings.ReplaceAll(row[0], ",", ""), 64)
+	paidin, err := strconv.ParseFloat(strings.ReplaceAll(row[0], ",", ""), 64)
 	if err != nil && row[0] != "" {
 		return transaction, fmt.Errorf("failed to parse PaidIn: %v", err)
 	}
+	transaction.SetPaidIn(paidin)
 
 	// Parse Balance
-	transaction.Balance, err = strconv.ParseFloat(strings.ReplaceAll(row[1], ",", ""), 64)
+	balance, err := strconv.ParseFloat(strings.ReplaceAll(row[1], ",", ""), 64)
 	if err != nil {
 		return transaction, fmt.Errorf("failed to parse Balance: %v", err)
 	}
+	transaction.SetBalance(balance)
+
 
 	// Parse Withdrawal
-	transaction.Withdrawal, err = strconv.ParseFloat(strings.ReplaceAll(row[2], ",", ""), 64)
+	withdrawal, err := strconv.ParseFloat(strings.ReplaceAll(row[2], ",", ""), 64)
 	if err != nil && row[2] != "" {
 		return transaction, fmt.Errorf("failed to parse Withdrawal: %v", err)
 	}
 
+	transaction.SetWithdrawal(withdrawal)
+
 	// Set Agent
-	transaction.Agent = row[3]
+	transaction.SetAgent( row[3])
 
 	return transaction, nil
 }
