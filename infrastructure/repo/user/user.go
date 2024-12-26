@@ -116,3 +116,27 @@ func (r *Repo) GetAll(page int) ([]*models.User, error) {
 	}
 	return users, nil
 }
+
+func (r *Repo) AddTransaction(usercode string, amount float64) (models.User, error){
+	//search and add te balance for the user
+
+	filter := bson.M{"user_code": usercode}
+	update := bson.M{
+		"$inc": bson.M{"balance": amount},
+	}
+
+	var updatedUserDTO userDTO
+	err := r.collection.FindOneAndUpdate(context.Background(), filter, update, options.FindOneAndUpdate().SetReturnDocument(options.After)).Decode(&updatedUserDTO)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return models.User{}, errors.New("User not found")
+		}
+		return models.User{}, fmt.Errorf("error updating User balance: %w", err)
+	}
+
+	updatedUser := ToUser(&updatedUserDTO)
+	return *updatedUser, nil
+
+}
+
+
