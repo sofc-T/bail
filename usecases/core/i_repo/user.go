@@ -22,4 +22,7 @@ type User interface {
 	//Get all
 	GetAll(int) ([]*models.User, error)
 
+	//add transaction
+	AddTransaction(string, float64) (*models.User, error)
+
 }
