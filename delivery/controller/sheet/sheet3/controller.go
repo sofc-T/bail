@@ -16,11 +16,11 @@ import (
 
 type sheet3_controller struct {
 	basecontroller.BaseHandler	
-	parseconntroller icmd.IHandler[ transaction_cmd.sheet3Command , models.Root]
+	parseconntroller icmd.IHandler[ transaction_cmd.Sheet3Command , models.Root]
 }
 
 type Config struct{
-	ParseHandler icmd.IHandler[ transaction_cmd.sheet3Command , models.Root]
+	ParseHandler icmd.IHandler[ transaction_cmd.Sheet3Command , models.Root]
 }
 
 func New(config Config) *sheet3_controller {
@@ -62,7 +62,7 @@ func (u sheet3_controller) sheet3(c *gin.Context) {
 		return
 	}
 
-	cmd := transaction_cmd.Newsheet3Command(input.File, input.Sheet)
+	cmd := transaction_cmd.NewSheet3Command(input.File, input.Sheet)
 	result, err := u.parseconntroller.Handle(*cmd)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
