@@ -48,8 +48,8 @@ func (u sheet3_controller) RegisterPrivilegedManager(router *gin.RouterGroup) {
 }
 
 func (u sheet3_controller) RegisterPublic(router *gin.RouterGroup) {
-	router = router.Group("/parse1")
-	router.POST("/promote", u.sheet3)
+	router = router.Group("/parse3")
+	router.POST("", u.sheet3)
 }
 
 
