@@ -1,6 +1,10 @@
 package models
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 
 
@@ -44,10 +48,16 @@ func NewRecord(record *RecordConfig) *Record {
 }
 
 type SystemLog struct {
+	id        uuid.UUID
 	records   []*Record
 	updatedAt time.Time
 	date      time.Time
 }
+
+func (s *SystemLog) GetID() uuid.UUID {
+	return s.id
+}
+
 
 func (s *SystemLog) GetRecords() []*Record {
 	return s.records
@@ -74,7 +84,8 @@ func (s *SystemLog) SetDate(date time.Time) {
 }
 
 type SystemLogConfig struct {
-	Records   []*RecordConfig
+	Id 	  uuid.UUID
+	Records   []*Record
 	UpdatedAt time.Time
 	Date      time.Time
 }
@@ -82,9 +93,10 @@ type SystemLogConfig struct {
 func NewSystemLog(config *SystemLogConfig) *SystemLog {
 	records := make([]*Record, len(config.Records))
 	for i, recordConfig := range config.Records {
-		records[i] = NewRecord(recordConfig)
+		records[i] = recordConfig
 	}
 	return &SystemLog{
+		id: 	  uuid.New(),
 		records:   records,
 		updatedAt: config.UpdatedAt,
 		date:      config.Date,
@@ -164,3 +176,41 @@ func (r *Record) SetUncollected(uncollected float64) {
 	r.uncollected = uncollected
 }
 
+
+func MapRecord(record RecordConfig) *Record{
+	return &Record{
+		name:              record.Name,
+		code:              record.Code,
+		date:              record.Date,
+		prSystem:          record.PRSystem,
+		previous:          record.Previous,
+		withdrawal:        record.Withdrawal,
+		slip:              record.Slip,
+		remainingOnSystem: record.RemainingOnSystem,
+		uncollected:       record.Uncollected,
+	}
+}
+
+
+func MapSystemLog(systemLog SystemLogConfig) *SystemLog{
+	records := make([]*Record, len(systemLog.Records))
+	for i, recordConfig := range systemLog.Records {
+		records[i] = MapRecord(RecordConfig{
+			Name:              recordConfig.name,
+			Code:              recordConfig.code,
+			Date:              recordConfig.date,
+			PRSystem:          recordConfig.prSystem,
+			Previous:          recordConfig.previous,
+			Withdrawal:        recordConfig.withdrawal,
+			Slip:              recordConfig.slip,
+			RemainingOnSystem: recordConfig.remainingOnSystem,
+			Uncollected:       recordConfig.uncollected,
+		})
+	}
+	return &SystemLog{
+		id: 	  systemLog.Id,
+		records:   records,
+		updatedAt: systemLog.UpdatedAt,
+		date:      systemLog.Date,
+	}
+}
