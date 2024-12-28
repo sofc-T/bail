@@ -140,3 +140,20 @@ func (r *Repo) AddTransaction(usercode string, amount float64) (*models.User, er
 }
 
 
+
+
+func (r *Repo) FindByCode(code string) (*models.User, error) {
+	filter := bson.M{"user_code": code}
+
+	var UserDTO userDTO
+	err := r.collection.FindOne(context.Background(), filter).Decode(&UserDTO)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.New("User not found")
+		}
+		return nil, fmt.Errorf("error finding User by code: %w", err)
+	}
+
+	User := ToUser(&UserDTO)
+	return User, nil
+}
