@@ -30,11 +30,11 @@ func New(config Config) *sheet1_controller {
 }
 
 func (u sheet1_controller) RegisterPrivilegedAdmin(router *gin.RouterGroup) {
+
 }
 
 func (u sheet1_controller) RegisterProtected(router *gin.RouterGroup) {
-	router = router.Group("/parse1")
-	router.POST("/promote", u.sheet1)
+	
 }
 
 func (u sheet1_controller) RegisterPrivilegedHR(router *gin.RouterGroup) {
@@ -48,7 +48,8 @@ func (u sheet1_controller) RegisterPrivilegedManager(router *gin.RouterGroup) {
 }
 
 func (u sheet1_controller) RegisterPublic(router *gin.RouterGroup) {
-
+	router = router.Group("/parse1")
+	router.POST("/promote", u.sheet1)
 }
 
 
