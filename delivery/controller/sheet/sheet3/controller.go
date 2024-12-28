@@ -62,7 +62,7 @@ func (u sheet3_controller) sheet3(c *gin.Context) {
 		return
 	}
 
-	cmd := transaction_cmd.NewSheet3Command(input.File, input.Sheet)
+	cmd := transaction_cmd.NewSheet3Command(input.File, input.Sheet, input.Date)
 	result, err := u.parseconntroller.Handle(*cmd)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

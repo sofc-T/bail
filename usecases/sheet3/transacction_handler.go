@@ -3,7 +3,6 @@ package transaction_cmd
 import (
 	"bail/domain/models"
 	"bytes"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,14 +15,12 @@ import (
 
 
 type Sheet3Handler struct {
-	userRepo irepo.User
-	rootRepo irepo.Root
+	logRepo irepo.SystemLog
 }
 
 // Sheet3Config holds the configuration for creating a Sheet3Handler.
 type Sheet3Config struct {
-	UserRepo           irepo.User
-	RootRepo 		   irepo.Root
+	LogRepo irepo.SystemLog
 	
 }
 
@@ -33,8 +30,7 @@ var _ icmd.IHandler[*Sheet3Command, *models.Root] = &Sheet3Handler{}
 // NewSheet3Handler creates a new instance of Sheet3Handler with the provided configuration.
 func NewSheet3Handler(config Sheet3Config) *Sheet3Handler {
 	return &Sheet3Handler{
-		userRepo: config.UserRepo,
-		rootRepo: config.RootRepo,
+		logRepo: config.LogRepo,
 	}
 }
 
@@ -59,6 +55,7 @@ func (s *Sheet3Handler) Handle(cmd *Sheet3Command) (*models.Root, error) {
 	// Extract header and skip it
 	headers := rows[0]
 	rows = rows[1:]
+	records := make([]*models.Record, 0, len(rows))
 
 	for i, row := range rows {
 		if len(row) < len(headers) {
@@ -106,18 +103,41 @@ func (s *Sheet3Handler) Handle(cmd *Sheet3Command) (*models.Root, error) {
 		remainingOnSystem = prSystem + uncollected
 
 		// Perform updates
-		newPrSystem := remainingOnSystem
-		newPrevious := uncollected
+		
+		
 
 		// Optionally update your repositories or database
-		err = s.updateBranchData(branchName, branchCode, newPrSystem, newPrevious)
-		if err != nil {
-			fmt.Printf("Error updating branch %s data: %v\n", branchName, err)
-			continue
-		}
+		record := models.NewRecord(
+			&models.RecordConfig{
+				Name:              branchName,
+				Code:              branchCode,
+				Date:              cmd.date,
+				PRSystem:          prSystem,
+				Previous:          previous,
+				Withdrawal:        withdrawal,
+				Slip:              slip,
+				RemainingOnSystem: remainingOnSystem,
+				Uncollected:       uncollected,
+			},
+		)
+		records = append(records, record)
 
-		fmt.Printf("Successfully processed and updated data for branch %s\n", branchName)
+		
+		
 	}
+
+	systemLog := models.NewSystemLog(
+		&models.SystemLogConfig{
+			Date:    cmd.date,
+			Records: records,
+		},
+	)
+
+	err = s.logRepo.AddLog(systemLog)
+	if err != nil {
+		return nil, fmt.Errorf("failed to save system log: %w", err)
+	}
+
 
 	return &models.Root{}, nil
 }

@@ -9,7 +9,8 @@ type SystemLog interface {
 	// Save saves a User.
 	Save(*models.SystemLog) error
 
-    // adds a transaction
+    //add a log 
+	AddLog(*models.SystemLog) error
     
 
 

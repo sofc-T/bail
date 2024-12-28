@@ -48,4 +48,15 @@ func (r *Repo) Save(systemLog *models.SystemLog) error {
 	return nil
 }
 
+func (r *Repo) AddLog(systemLog *models.SystemLog) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	// Convert the logmodel.log to logDTO
+	logDTO := fromSystemLog(systemLog)
 
+	_, err := r.collection.InsertOne(ctx, logDTO)
+	if err != nil {
+		return errors.New("error adding log")
+	}
+	return nil
+}
