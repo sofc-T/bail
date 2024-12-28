@@ -42,82 +42,105 @@ func (s *Sheet2Handler) Handle(cmd *Sheet2Command) (*models.Root, error) {
 	fileData := cmd.file
 	sheet := cmd.sheet
 
+	// Open Excel file from bytes
 	excelFile, err := excelize.OpenReader(bytes.NewReader(fileData))
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("failed to open Excel file from bytes: %v", err))
+		return nil, fmt.Errorf("failed to open Excel file from bytes: %w", err)
 	}
 
+	// Validate the sheet index
 	sheetName := excelFile.GetSheetName(sheet)
+	if sheetName == "" {
+		return nil, fmt.Errorf("sheet %d does not exist in the Excel file", sheet)
+	}
+
 	rows, err := excelFile.GetRows(sheetName)
 	if err != nil {
-		return nil, errors.New(fmt.Sprintf("failed to read rows: %v", err))
+		return nil, fmt.Errorf("failed to read rows from sheet %s: %w", sheetName, err)
 	}
 
+	var totalTransferred float64
 	for i, row := range rows {
+		// Skip the header row
 		if i == 0 {
 			continue
 		}
 
+		// Skip rows with insufficient data
 		if len(row) < 4 {
-			fmt.Printf("Skipping row %d: not enough columns\n", i+1)
+			fmt.Printf("Skipping row %d: insufficient columns\n", i+1)
 			continue
 		}
 
-		limitedRow := row[:4]
-		transaction, err := parseTransaction(limitedRow)
+		// Extract relevant columns (customize based on your actual column mapping)
+		userType := strings.TrimSpace(row[0]) // Example: "branch", "employee"
+		branch := strings.TrimSpace(row[1])  // Branch code or empty
+		amountStr := strings.TrimSpace(row[2])
+		amount, err := strconv.ParseFloat(amountStr, 64)
 		if err != nil {
-			fmt.Printf("Error parsing row %d: %v\n", i+1, err)
+			fmt.Printf("Skipping row %d: invalid amount %s\n", i+1, amountStr)
 			continue
 		}
 
-		agentCode := strings.Split(transaction.Agent(), " ")[0]
-
-		if transaction.PaidIn() > 0 {
-			fmt.Printf("Notify agent %s: Deduct %.2f from PaidIn. Update admin to new balance %.2f\n", agentCode, transaction.PaidIn(), transaction.Balance())
-			_, err := s.userRepo.AddTransaction(agentCode, transaction.Balance())
-			if err != nil{
-				return nil, err
+		// Process based on user type and branch presence
+		switch userType {
+		case "branch":
+			// Deduct from branch and update admin balance
+			err := s.branchRepo.DeductBalance(branch, amount)
+			if err != nil {
+				fmt.Printf("Error updating branch %s balance: %v\n", branch, err)
+				continue
 			}
-			err = s.rootRepo.AddTransaction(transaction.Balance())
-			if err != nil{
-				return nil, err 
+			err = s.adminRepo.UpdateBalance(amount)
+			if err != nil {
+				fmt.Printf("Error updating admin balance: %v\n", err)
+				continue
 			}
 
-			
-		} else {
-			fmt.Printf("Notify agent %s: Deduct %.2f from Withdrawal. Update admin to new balance %.2f\n", agentCode, transaction.Withdrawal(), transaction.Balance())
-			s.rootRepo.AddTransaction(transaction.Balance())
+		case "employee":
+			if branch != "" {
+				// Deduct from user and branch, then update admin balance
+				err := s.branchRepo.DeductBalance(branch, amount)
+				if err != nil {
+					fmt.Printf("Error updating branch %s balance: %v\n", branch, err)
+					continue
+				}
+			}
+			err := s.userRepo.DeductBalance(row[3], amount) // Assuming user ID is in column 4
+			if err != nil {
+				fmt.Printf("Error updating user balance: %v\n", err)
+				continue
+			}
+			err = s.adminRepo.UpdateBalance(amount)
+			if err != nil {
+				fmt.Printf("Error updating admin balance: %v\n", err)
+				continue
+			}
+
+		default:
+			fmt.Printf("Skipping row %d: unknown user type %s\n", i+1, userType)
+			continue
 		}
+
+		// Record the transaction
+		transaction := models.Transaction{
+			UserType: userType,
+			Branch:   branch,
+			Amount:   amount,
+		}
+		err = s.transactionRepo.Create(transaction)
+		if err != nil {
+			fmt.Printf("Error creating transaction for row %d: %v\n", i+1, err)
+			continue
+		}
+
+		// Update total transferred
+		totalTransferred += amount
 	}
-	return &models.Root{}, nil
+
+	// Return the total transferred and any final error
+	return &models.Root{
+		TotalTransferred: totalTransferred,
+	}, nil
 }
 
-
-func parseTransaction(row []string) (models.Transaction, error) {
-	var transaction models.Transaction
-	var err error
-
-	paidin, err := strconv.ParseFloat(strings.ReplaceAll(row[0], ",", ""), 64)
-	if err != nil && row[0] != "" {
-		return transaction, fmt.Errorf("failed to parse PaidIn: %v", err)
-	}
-	transaction.SetPaidIn(paidin)
-
-	balance, err := strconv.ParseFloat(strings.ReplaceAll(row[1], ",", ""), 64)
-	if err != nil {
-		return transaction, fmt.Errorf("failed to parse Balance: %v", err)
-	}
-	transaction.SetBalance(balance)
-
-
-	withdrawal, err := strconv.ParseFloat(strings.ReplaceAll(row[2], ",", ""), 64)
-	if err != nil && row[2] != "" {
-		return transaction, fmt.Errorf("failed to parse Withdrawal: %v", err)
-	}
-
-	transaction.SetWithdrawal(withdrawal)
-
-	transaction.SetAgent( row[3])
-
-	return transaction, nil
-}
