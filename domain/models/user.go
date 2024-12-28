@@ -21,6 +21,7 @@ type User struct {
 	createdAt           time.Time
 	updatedAt           time.Time
 	password            string
+	branchCode          string
 }
 
 type UserConfig struct {
@@ -37,6 +38,7 @@ type UserConfig struct {
 	UpdatedAt           time.Time
 	CreatedAt           time.Time
 	Password            string
+	branchCode		  string
 }
 
 func (u *User) UpdateTimestamps() {
@@ -71,6 +73,10 @@ func (u *User) CoSignerName() string {
 	return u.coSignerName
 }
 
+func (u *User) BranchCode() string {
+	return u.branchCode
+}
+
 func (u *User) CodeNumber() string {
 	return u.codeNumber
 }
@@ -102,6 +108,11 @@ func (u *User) SetID(id uuid.UUID) {
 
 func (u *User) SetName(name string) {
 	u.name = name
+	u.UpdateTimestamps()
+}
+
+func (u *User) SetBranchCode(branchCode string) {
+	u.branchCode = branchCode
 	u.UpdateTimestamps()
 }
 
@@ -165,6 +176,7 @@ func NewUser(config UserConfig) *User {
 		createdAt:           config.CreatedAt,
 		updatedAt:           config.UpdatedAt,
 		password:            config.Password,
+		branchCode:          config.branchCode,
 	}
 }
 
@@ -183,6 +195,7 @@ func MapUser(config UserConfig) *User {
 		updatedAt:           config.UpdatedAt,
 		createdAt:           config.CreatedAt,
 		password:            config.Password,
+		branchCode:          config.branchCode,
 	}
 	u.UpdateTimestamps()
 	return u
