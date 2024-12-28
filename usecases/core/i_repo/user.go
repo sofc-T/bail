@@ -25,4 +25,7 @@ type User interface {
 	//add transaction
 	AddTransaction(string, float64) (*models.User, error)
 
+	//Find by Code
+	FindByCode(code string) (*models.User, error)
+
 }

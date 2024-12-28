@@ -3,7 +3,6 @@ package transaction_cmd
 import (
 	"bail/domain/models"
 	"bytes"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -37,18 +36,17 @@ func NewSheet2Handler(config Sheet2Config) *Sheet2Handler {
 		rootRepo: config.RootRepo,
 	}
 }
-
 func (s *Sheet2Handler) Handle(cmd *Sheet2Command) (*models.Root, error) {
 	fileData := cmd.file
 	sheet := cmd.sheet
 
-	// Open Excel file from bytes
+	// Open the Excel file
 	excelFile, err := excelize.OpenReader(bytes.NewReader(fileData))
 	if err != nil {
-		return nil, fmt.Errorf("failed to open Excel file from bytes: %w", err)
+		return nil, fmt.Errorf("failed to open Excel file: %w", err)
 	}
 
-	// Validate the sheet index
+	// Validate the sheet name
 	sheetName := excelFile.GetSheetName(sheet)
 	if sheetName == "" {
 		return nil, fmt.Errorf("sheet %d does not exist in the Excel file", sheet)
@@ -59,88 +57,100 @@ func (s *Sheet2Handler) Handle(cmd *Sheet2Command) (*models.Root, error) {
 		return nil, fmt.Errorf("failed to read rows from sheet %s: %w", sheetName, err)
 	}
 
-	var totalTransferred float64
-	for i, row := range rows {
-		// Skip the header row
-		if i == 0 {
-			continue
-		}
-
-		// Skip rows with insufficient data
-		if len(row) < 4 {
-			fmt.Printf("Skipping row %d: insufficient columns\n", i+1)
-			continue
-		}
-
-		// Extract relevant columns (customize based on your actual column mapping)
-		userType := strings.TrimSpace(row[0]) // Example: "branch", "employee"
-		branch := strings.TrimSpace(row[1])  // Branch code or empty
-		amountStr := strings.TrimSpace(row[2])
-		amount, err := strconv.ParseFloat(amountStr, 64)
-		if err != nil {
-			fmt.Printf("Skipping row %d: invalid amount %s\n", i+1, amountStr)
-			continue
-		}
-
-		// Process based on user type and branch presence
-		switch userType {
-		case "branch":
-			// Deduct from branch and update admin balance
-			err := s.branchRepo.DeductBalance(branch, amount)
-			if err != nil {
-				fmt.Printf("Error updating branch %s balance: %v\n", branch, err)
-				continue
-			}
-			err = s.adminRepo.UpdateBalance(amount)
-			if err != nil {
-				fmt.Printf("Error updating admin balance: %v\n", err)
-				continue
-			}
-
-		case "employee":
-			if branch != "" {
-				// Deduct from user and branch, then update admin balance
-				err := s.branchRepo.DeductBalance(branch, amount)
-				if err != nil {
-					fmt.Printf("Error updating branch %s balance: %v\n", branch, err)
-					continue
-				}
-			}
-			err := s.userRepo.DeductBalance(row[3], amount) // Assuming user ID is in column 4
-			if err != nil {
-				fmt.Printf("Error updating user balance: %v\n", err)
-				continue
-			}
-			err = s.adminRepo.UpdateBalance(amount)
-			if err != nil {
-				fmt.Printf("Error updating admin balance: %v\n", err)
-				continue
-			}
-
-		default:
-			fmt.Printf("Skipping row %d: unknown user type %s\n", i+1, userType)
-			continue
-		}
-
-		// Record the transaction
-		transaction := models.Transaction{
-			UserType: userType,
-			Branch:   branch,
-			Amount:   amount,
-		}
-		err = s.transactionRepo.Create(transaction)
-		if err != nil {
-			fmt.Printf("Error creating transaction for row %d: %v\n", i+1, err)
-			continue
-		}
-
-		// Update total transferred
-		totalTransferred += amount
+	if len(rows) < 2 {
+		return nil, fmt.Errorf("sheet %s has insufficient data", sheetName)
 	}
 
-	// Return the total transferred and any final error
-	return &models.Root{
-		TotalTransferred: totalTransferred,
-	}, nil
-}
+	// Extract header row (user codes)
+	headerRow := rows[0]
+	if len(headerRow) == 0 {
+		return nil, fmt.Errorf("no user codes found in the header row")
+	}
 
+	var totalTransferred float64
+
+	// Iterate over columns
+	for colIndex, userCode := range headerRow {
+		if strings.TrimSpace(userCode) == "" {
+			// Stop when an empty column is encountered
+			break
+		}
+
+		// Process rows in the column
+		for rowIndex := 1; rowIndex < len(rows); rowIndex++ {
+			row := rows[rowIndex]
+
+			// Ensure the column exists in the row
+			if len(row) <= colIndex {
+				continue
+			}
+
+			amountStr := strings.TrimSpace(row[colIndex])
+			if amountStr == "" {
+				// Stop processing this column when an empty cell is found
+				break
+			}
+
+			// Parse the amount
+			amount, err := strconv.ParseFloat(amountStr, 64)
+			if err != nil {
+				fmt.Printf("Skipping invalid amount in column %d, row %d: %s\n", colIndex+1, rowIndex+1, amountStr)
+				continue
+			}
+
+			// Fetch the user by code (you'll need to implement this function)
+			user, err := s.userRepo.FindByCode(userCode)
+			if err != nil {
+				fmt.Printf("Error fetching user for code %s in column %d: %v\n", userCode, colIndex+1, err)
+				continue
+			}
+
+			// Process the deduction and updates based on user type
+			switch user.Role() {
+			case "branch":
+				// Deduct from branch and update admin balance
+				_,err = s.userRepo.AddTransaction(userCode, -1 * amount)
+				if err != nil {
+					fmt.Printf("Error deducting from branch %s: %v\n", user.BranchCode(), err)
+					continue
+				}
+
+				err = s.rootRepo.AddTransaction(amount)
+				if err != nil {
+					fmt.Printf("Error updating admin balance: %v\n", err)
+					continue
+				}
+
+			case "employee":
+				if user.BranchCode() != "" {
+					// Deduct from user and branch, then update admin balance
+					_,err = s.userRepo.AddTransaction(userCode, -1 * amount)
+					if err != nil {
+						fmt.Printf("Error deducting from branch %s: %v\n", user.CodeNumber(), err)
+						continue
+					}
+				}
+
+				_,err = s.userRepo.AddTransaction(userCode, -1 * amount)
+				if err != nil {
+					fmt.Printf("Error deducting from user %s: %v\n", user.CodeNumber(), err)
+					continue
+				}
+
+				err = s.rootRepo.AddTransaction(amount)
+				if err != nil {
+					fmt.Printf("Error updating admin balance: %v\n", err)
+					continue
+				}
+
+			default:
+				fmt.Printf("Unknown user type for code %s in column %d\n", userCode, colIndex+1)
+				continue
+			}
+
+			totalTransferred += amount
+		}
+	}
+
+	return &models.Root{}, nil
+}
