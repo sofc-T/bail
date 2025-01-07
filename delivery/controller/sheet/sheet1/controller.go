@@ -47,6 +47,7 @@ func (u sheet1_controller) RegisterPrivilegedManager(router *gin.RouterGroup) {
 	
 }
 
+//sheet one is the third sheet in the logs
 func (u sheet1_controller) RegisterPublic(router *gin.RouterGroup) {
 	router = router.Group("/parse1")
 	router.POST("", u.sheet1)
